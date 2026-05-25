@@ -1,0 +1,42 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "fpod"
+version = "0.1.0"
+description = "Manage Frappe benches on rootless Podman."
+requires-python = ">=3.11"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Vivek", email = "vivek@quarkcs.com" }]
+keywords = ["frappe", "podman", "bench", "erpnext"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+dependencies = [
+    "typer >= 0.12",
+    "jinja2 >= 3.1",
+    "rich >= 13",
+    "tomli-w >= 1.0",
+    "httpx >= 0.27",
+    "podman-compose >= 1.4",
+]
+
+[project.optional-dependencies]
+dev = ["pytest >= 8.0"]
+
+[project.scripts]
+fpod = "fpod.cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/fpod"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/fpod", "tests", "PLAN.md", "README.md", "pyproject.toml"]
