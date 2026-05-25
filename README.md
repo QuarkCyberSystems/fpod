@@ -83,7 +83,7 @@ disposable dev benches — use **fpod**.
 Creates a venv, installs fpod editable, and symlinks `fpod` onto your PATH:
 
 ```bash
-git clone https://github.com/aambernath/fpod.git ~/fpod
+git clone https://github.com/QuarkCyberSystems/fpod.git ~/fpod
 cd ~/fpod
 ./install.sh
 ```
@@ -98,7 +98,7 @@ pipx installs into an isolated venv and puts the `fpod` entry point on your PATH
 automatically:
 
 ```bash
-pipx install git+https://github.com/aambernath/fpod.git
+pipx install git+https://github.com/QuarkCyberSystems/fpod.git
 # or from a local clone:
 pipx install .
 ```
@@ -145,7 +145,7 @@ fpod runs on any Linux host with **rootless Podman 5.x**, **Python 3.11+**, and
 
 ```bash
 # 1. clone (repo is private — auth via gh / SSH key / PAT)
-git clone https://github.com/aambernath/fpod.git ~/fpod
+git clone https://github.com/QuarkCyberSystems/fpod.git ~/fpod
 cd ~/fpod
 
 # 2. install (Option A or B above)
@@ -161,7 +161,7 @@ fpod create demo
 
 Notes:
 - **Private repo**: cloning needs credentials — easiest is `gh auth login` then
-  `gh repo clone aambernath/fpod`, or add an SSH key and use the `git@` URL.
+  `gh repo clone QuarkCyberSystems/fpod`, or add an SSH key and use the `git@` URL.
 - **First `fpod init` on each machine** pulls the service images (~3 GB) and
   starts traefik/mariadb/redis/mailpit/adminer. One-time per host.
 - **Benches don't transfer between machines** by copying `~/.fpod`. To move a
