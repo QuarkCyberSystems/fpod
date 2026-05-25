@@ -161,11 +161,15 @@ def logs(
 @app.command(name="install-app")
 def install_app(
     name: str = typer.Argument(..., help="Bench name."),
-    app_name: str = typer.Argument(..., metavar="APP", help="Frappe app name (e.g. erpnext)."),
-    branch: str = typer.Option(None, "--branch", "-b", help="App branch override."),
+    app_name: str = typer.Argument(..., metavar="APP", help="Canonical app name (e.g. erpnext)."),
+    branch: str = typer.Option(None, "--branch", "-b", help="App branch."),
+    url: str = typer.Option(
+        None, "--url",
+        help="Git remote to fetch from (e.g. a fork). Private repos: set GITHUB_TOKEN env.",
+    ),
 ) -> None:
-    """Install a Frappe app into a bench."""
-    _handle(wrap_cmd.install_app, name, app_name, branch)
+    """Install a Frappe app into a bench (from bench's registry, or a git --url)."""
+    _handle(wrap_cmd.install_app, name, app_name, branch, url)
 
 
 @app.command()

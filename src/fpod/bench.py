@@ -386,14 +386,32 @@ def _site_installed_apps(cn: str, site: str) -> list[str]:
     return apps
 
 
-def install_app(cfg: FpodConfig, name: str, app: str, *, branch: str | None = None) -> Manifest:
-    """Fetch a Frappe app's code into the bench and install it on the site.
+def install_app(
+    cfg: FpodConfig,
+    name: str,
+    app: str,
+    *,
+    branch: str | None = None,
+    url: str | None = None,
+    token: str | None = None,
+) -> Manifest:
+    """Fetch a Frappe app into the bench and install it on the site.
+
+    `app` is always the canonical app name (its module / pyproject name) — used
+    for the apps/<app> dir check, the list-apps check, and `install-app`. For a
+    fork whose app name differs from the repo name, pass the app name here and
+    the repo in `url`.
+
+    `url` (optional): a git remote to fetch from instead of bench's shorthand
+    registry — e.g. a fork like QuarkCyberSystems/erpnext_enterprise.
+
+    `token` (optional): a GitHub PAT for a private `url`. Injected via a
+    transient git `insteadOf` rewrite inside the container for the duration of
+    the clone, then removed — it is never written into the bench's app files.
+
     Two phases, each independently idempotent:
-      1. `bench get-app [--branch X] <app>` — clone + pip install deps.
-         bench itself short-circuits if the app's git dir already exists.
+      1. `bench get-app [--branch X] <app|url>` — clone + pip install deps.
       2. `bench --site <site> install-app <app>` — run install hooks (DB, etc.).
-         We check `bench list-apps` first so retrying after a partial failure
-         doesn't error with "already installed".
     """
     m = load_manifest(cfg, name)
     cn = container_name(name)
@@ -406,11 +424,23 @@ def install_app(cfg: FpodConfig, name: str, app: str, *, branch: str | None = No
     if app_dir.exists():
         console.print(f"  {app} already in apps/; skipping get-app phase")
     else:
-        get_args = ["get-app"]
-        if branch:
-            get_args.extend(["--branch", branch])
-        get_args.append(app)
-        _exec_bench(cn, get_args)
+        insteadof_key: str | None = None
+        if url and token:
+            # Transient credential: rewrite https://github.com/ to embed the
+            # token, only inside this container's gitconfig, only for the clone.
+            insteadof_key = f"url.https://x-access-token:{token}@github.com/.insteadOf"
+            podman("exec", cn, "git", "config", "--global",
+                   insteadof_key, "https://github.com/", capture=True)
+        try:
+            get_args = ["get-app"]
+            if branch:
+                get_args.extend(["--branch", branch])
+            get_args.append(url or app)
+            _exec_bench(cn, get_args)
+        finally:
+            if insteadof_key:
+                podman("exec", cn, "git", "config", "--global", "--unset",
+                       insteadof_key, capture=True, check=False)
 
     if app in _site_installed_apps(cn, m.site):
         console.print(f"  {app} already on site {m.site}; skipping install-app phase")

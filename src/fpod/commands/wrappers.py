@@ -1,6 +1,7 @@
 """CLI handlers for the `bench` command wrappers: install-app, migrate, backup."""
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from rich.console import Console
@@ -11,11 +12,15 @@ from fpod.config import load_config
 console = Console()
 
 
-def install_app(name: str, app_name: str, branch: str | None) -> None:
+def install_app(name: str, app_name: str, branch: str | None, url: str | None = None) -> None:
     cfg = load_config()
+    # Private URLs auth via GITHUB_TOKEN (transient — never stored in the bench).
+    token = os.environ.get("GITHUB_TOKEN") or None
+    src = url if url else "bench registry"
     label = f"branch={branch}" if branch else "default branch"
-    console.print(f"[bold]fpod install-app {name} {app_name}[/]  ({label})")
-    m = bench.install_app(cfg, name, app_name, branch=branch)
+    auth = "  [dim](GITHUB_TOKEN set)[/]" if (url and token) else ""
+    console.print(f"[bold]fpod install-app {name} {app_name}[/]  ({label}, from {src}){auth}")
+    m = bench.install_app(cfg, name, app_name, branch=branch, url=url, token=token)
     console.print(f"[green]installed[/]  {app_name} on {m.site}")
     console.print(f"  apps: {', '.join(m.apps)}")
 
