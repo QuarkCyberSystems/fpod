@@ -21,6 +21,7 @@ class Manifest:
     site: str
     created: str  # ISO 8601 datetime string
     frappe_branch: str
+    python: str = ""  # container interpreter path; "" for pre-0.1.1 benches
     apps: list[str] = field(default_factory=lambda: ["frappe"])
     db_name: str = ""
     state: str = "running"  # initializing | running | stopped | broken
@@ -44,6 +45,7 @@ def load_manifest(cfg: FpodConfig, name: str) -> Manifest:
         site=raw["site"],
         created=raw["created"],
         frappe_branch=raw["frappe_branch"],
+        python=raw.get("python", ""),
         apps=list(raw.get("apps", ["frappe"])),
         db_name=raw.get("db_name", ""),
         state=raw.get("state", "running"),
@@ -58,6 +60,7 @@ def save_manifest(cfg: FpodConfig, m: Manifest) -> None:
         "site": m.site,
         "created": m.created,
         "frappe_branch": m.frappe_branch,
+        "python": m.python,
         "apps": list(m.apps),
         "db_name": m.db_name,
         "state": m.state,

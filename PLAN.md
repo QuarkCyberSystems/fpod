@@ -147,12 +147,12 @@ mariadb_root_password = "<random 32-char, generated at init>"
 
 [bench_defaults]
 frappe_image  = "docker.io/frappe/bench:latest"
-# Reality check (2026-05): Frappe `version-16` HEAD now requires Python 3.14,
-# but `docker.io/frappe/bench:latest` ships only 3.11 + 3.12. Until a 3.14
-# bench image lands upstream, default to v15. v16 is reachable later via a
-# custom image with Python 3.14 (see post-MVP §12).
+# Verified against frappe_docker images/bench/Dockerfile (2026-09): the image is
+# debian:bookworm-slim with NO apt-installed Python. pyenv provides 3.12 and 3.14
+# (PYTHON_VERSION_PREV / PYTHON_VERSION, `pyenv global 3.14 3.12`), so only the
+# shims exist. v15 runs on 3.12; v16 requires 3.14 and fpod selects it by branch.
 frappe_branch = "version-15"
-python        = "/usr/bin/python3.11"
+python        = "/home/frappe/.pyenv/shims/python3.12"
 developer_mode = true
 admin_password = "admin"           # default for new sites; user can override
 ```

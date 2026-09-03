@@ -11,7 +11,9 @@ console = Console()
 
 def run(*, name: str, branch: str, apps: str, admin_password: str, python: str | None = None) -> None:
     cfg = load_config()
-    py_note = f"  python={python}" if python else ""
+    branch = branch or str(cfg.bench_defaults["frappe_branch"])
+    python = bench.resolve_python(cfg, branch, python)
+    py_note = f"  python={python}"
     console.print(
         f"[bold]fpod create {name}[/]  branch={branch}  site={name}.{cfg.base_domain}{py_note}"
     )

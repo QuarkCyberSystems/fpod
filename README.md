@@ -185,9 +185,9 @@ fpod install-app demo erpnext --branch version-15
 fpod migrate demo
 fpod backup demo                         # writes to ~/.fpod/backups/demo/<timestamp>/
 
-# Frappe v16 (needs Python 3.14)
-fpod create erp16 --branch version-16 --python /home/frappe/.pyenv/shims/python3.14
-fpod install-app erp16 erpnext --branch version-16
+# Frappe v16 — the 3.14 interpreter is selected automatically
+fpod create erp16 --branch version-16
+fpod install-app erp16 erpnext           # inherits the bench's version-16
 
 # Lifecycle
 fpod stop demo                           # services stay up
@@ -205,16 +205,21 @@ fpod services status
 
 ## Caveats worth knowing
 
-- **Default branch is `version-15`; v16 needs Python 3.14.** Frappe v16
-  requires Python 3.14, which `docker.io/frappe/bench:latest` now ships (via
-  pyenv). Create a v16 bench by pointing `--python` at it:
+- **Default branch is `version-15`; both v15 and v16 work.** The bench image is
+  `debian:bookworm-slim` and installs **no system Python** — every interpreter is
+  a pyenv shim (3.12 and 3.14; `pyenv global 3.14 3.12`). fpod picks the right one
+  from the branch: v15 → `python3.12`, v16/develop → `python3.14`.
   ```bash
-  fpod create erp16 --branch version-16 \
-      --python /home/frappe/.pyenv/shims/python3.14
-  fpod install-app erp16 erpnext --branch version-16
+  fpod create erp16 --branch version-16   # no --python needed
+  fpod install-app erp16 erpnext          # inherits version-16 from the bench
   ```
-  The default stays v15 because `:latest` is a moving tag — pin Python
-  explicitly for v16 so an image change can't silently break you.
+  `--python` still overrides, but a combination that cannot work is rejected up
+  front rather than failing minutes into `bench init`:
+  ```
+  $ fpod create erp16 --branch version-16 --python /home/frappe/.pyenv/shims/python3.12
+  error: branch 'version-16' needs Python >= 3.14, but --python … is 3.12.
+  ```
+  The default stays v15 because `:latest` is a moving tag.
 - **Dev mode only.** No `bench start` → gunicorn switchover. Use `frappe_docker`
   directly if you need a prod-mode deployment.
 - **`*.localhost` resolution** comes for free on any modern Linux resolver

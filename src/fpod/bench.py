@@ -27,6 +27,48 @@ _RESERVED = {
     "mailpit", "adminer",
 }
 
+# The bench image installs no system Python (debian:bookworm-slim, nothing from
+# apt) — every interpreter is a pyenv shim. Verified against frappe_docker
+# images/bench/Dockerfile: PYTHON_VERSION_PREV=3.12, PYTHON_VERSION=3.14.
+PYENV_SHIM_DIR = "/home/frappe/.pyenv/shims"
+
+# Frappe v16 requires 3.14; v15 runs fine on 3.12.
+BRANCH_PYTHON: dict[str, str] = {
+    "version-15": f"{PYENV_SHIM_DIR}/python3.12",
+    "version-16": f"{PYENV_SHIM_DIR}/python3.14",
+    "develop": f"{PYENV_SHIM_DIR}/python3.14",
+}
+MIN_PYTHON_FOR_BRANCH: dict[str, tuple[int, int]] = {
+    "version-16": (3, 14),
+    "develop": (3, 14),
+}
+
+_PY_VERSION_RE = re.compile(r"python(\d+)\.(\d+)$")
+
+
+def resolve_python(cfg: FpodConfig, branch: str, python: str | None) -> str:
+    """Pick the container interpreter for a branch, rejecting impossible pairings.
+
+    An explicit --python always wins, but is checked against the branch's floor so
+    `--branch version-16 --python .../python3.12` fails here instead of ten minutes
+    into `bench init`. With no --python the branch decides; unknown branches (forks,
+    hotfix lines) fall back to the configured default.
+    """
+    floor = MIN_PYTHON_FOR_BRANCH.get(branch)
+    if python:
+        m = _PY_VERSION_RE.search(python)
+        if floor and m:
+            got = (int(m.group(1)), int(m.group(2)))
+            if got < floor:
+                raise ValidationError(
+                    f"branch {branch!r} needs Python >= {floor[0]}.{floor[1]}, but "
+                    f"--python {python} is {got[0]}.{got[1]}. "
+                    f"Use {BRANCH_PYTHON[branch]} instead."
+                )
+        return python
+    return BRANCH_PYTHON.get(branch) or str(cfg.bench_defaults["python"])
+
+
 # Marker the entrypoint prints; we can switch on these from the log stream.
 LOG_INIT_COMPLETE = "==> fpod: init complete"
 LOG_STARTING_BENCH = "==> fpod: starting bench"
@@ -84,7 +126,7 @@ def render_compose(
         bench_dir=str(bench_dir(cfg, name)),
         frappe_image=cfg.bench_defaults["frappe_image"],
         branch=branch,
-        python=python or cfg.bench_defaults["python"],
+        python=resolve_python(cfg, branch, python),
         mariadb_root_password=cfg.mariadb_root_password,
         admin_password=admin_password,
         site_name=site_name(cfg, name),
@@ -174,7 +216,8 @@ def create(
         console.print("  services not all running; starting them")
         services.up(cfg)
 
-    write_files(cfg, name, branch=branch, admin_password=admin_password, python=python)
+    resolved_python = resolve_python(cfg, branch, python)
+    write_files(cfg, name, branch=branch, admin_password=admin_password, python=resolved_python)
     console.print(f"  rendered: {compose_file(cfg, name)}")
     console.print(f"  rendered: {entrypoint_file(cfg, name)}")
 
@@ -185,6 +228,7 @@ def create(
         site=site_name(cfg, name),
         created=datetime.now(timezone.utc).isoformat(timespec="seconds"),
         frappe_branch=branch,
+        python=resolved_python,
         apps=["frappe"],
         db_name="",
         state="initializing",
@@ -414,6 +458,14 @@ def install_app(
       2. `bench --site <site> install-app <app>` — run install hooks (DB, etc.).
     """
     m = load_manifest(cfg, name)
+
+    # Apps from bench's registry follow Frappe's own branch naming, so default to
+    # the bench's branch — otherwise `install-app erp16 erpnext` silently pulls
+    # erpnext's default (v15) onto a v16 site. A --url fork may not follow that
+    # convention, so never guess for those.
+    if branch is None and url is None:
+        branch = m.frappe_branch
+
     cn = container_name(name)
     if not container_running(cn):
         raise FpodError(f"bench {name} must be running. `fpod start {name}` first.")

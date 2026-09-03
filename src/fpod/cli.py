@@ -79,12 +79,16 @@ def version() -> None:
 @app.command()
 def create(
     name: str = typer.Argument(..., help="Bench name (DNS-safe slug)."),
-    branch: str = typer.Option("version-15", "--branch", "-b", help="Frappe branch."),
+    branch: str = typer.Option(
+        None, "--branch", "-b",
+        help="Frappe branch. Default: bench_defaults.frappe_branch from config.",
+    ),
     apps: str = typer.Option("", "--apps", help="Comma-separated extra apps to install."),
     admin_password: str = typer.Option("admin", "--admin-password", help="Site admin password."),
     python: str = typer.Option(
         None, "--python",
-        help="Interpreter path inside the container (e.g. /home/frappe/.pyenv/shims/python3.14 for v16). Defaults to config.",
+        help="Override the container interpreter. Default: chosen from --branch "
+             "(v15 -> python3.12, v16/develop -> python3.14).",
     ),
 ) -> None:
     """Provision a new bench."""
@@ -162,7 +166,10 @@ def logs(
 def install_app(
     name: str = typer.Argument(..., help="Bench name."),
     app_name: str = typer.Argument(..., metavar="APP", help="Canonical app name (e.g. erpnext)."),
-    branch: str = typer.Option(None, "--branch", "-b", help="App branch."),
+    branch: str = typer.Option(
+        None, "--branch", "-b",
+        help="App branch. Default: the bench's own frappe_branch (registry apps only).",
+    ),
     url: str = typer.Option(
         None, "--url",
         help="Git remote to fetch from (e.g. a fork). Private repos: set GITHUB_TOKEN env.",

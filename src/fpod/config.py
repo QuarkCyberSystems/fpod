@@ -34,12 +34,13 @@ def _default_compose_bin() -> str:
 
 DEFAULT_BENCH_DEFAULTS: dict[str, object] = {
     "frappe_image": "docker.io/frappe/bench:latest",
-    # Reality check (2026-05): Frappe `version-16` HEAD requires Python 3.14,
-    # but docker.io/frappe/bench:latest ships only 3.11 + 3.12 (via pyenv).
-    # Until a v3.14 bench image lands upstream, default to v15 — which our
-    # earlier ~/frappe-stack bench validated on this image.
+    # Verified against frappe_docker images/bench/Dockerfile (2026-09): the image
+    # is debian:bookworm-slim and installs NO system Python via apt. Every
+    # interpreter comes from pyenv — PYTHON_VERSION_PREV=3.12, PYTHON_VERSION=3.14,
+    # `pyenv global 3.14 3.12`. So /usr/bin/python3.11 does not exist in the image;
+    # only the shims do. v15 runs on 3.12, v16 requires 3.14.
     "frappe_branch": "version-15",
-    "python": "/usr/bin/python3.11",
+    "python": "/home/frappe/.pyenv/shims/python3.12",
     "developer_mode": True,
     "admin_password": "admin",
 }
